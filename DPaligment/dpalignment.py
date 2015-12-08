@@ -3,10 +3,6 @@ import matplotlib as mpl
 import sys
 #from Bio import SeqIO
 #for seq_record in SeqIO.parse("/Users/Tristan/Documents/PythonPrograms/AnalyzingSeq_HW4/sample.fasta", "fasta"):
-#        seqList.append(str(record.seq))
-#    print(seq_record.id)
-#    print(repr(seq_record.seq))
-#    print(len(seq_record))
 
 
 #Take two amino acidic sequences
