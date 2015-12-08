@@ -49,7 +49,8 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
             
         dist, cost, path = dtw(mfcc1.T, mfcc2.T)
         
-        textEdit_2.appendText(dist)
+        val = str(dist)
+        self.textEdit_2.setText("lala" + val)
        
             
     def plot(self):
