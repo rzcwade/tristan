@@ -1,18 +1,10 @@
-%%file main.py
 #!/usr/bin/env python
 import sys
-from PyQt4 import QtGui, QtCore, uic
+from PyQt4 import QtGui, uic
 import pyaudio
-import numpy as np
-import scipy.signal
-from scipy.io.wavfile import read as wavread, write as wavwrite
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 import wave
-import pyaudio
-import threading
-import atexit
-import pyqtgraph as pg
 import librosa
 from dtw import dtw
 
@@ -28,61 +20,86 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
         QtGui.QMainWindow.__init__(self)
         Ui_MainWindow.__init__(self)
         self.setupUi(self)
+        
+        #initialize a rank array to hold all the scores
+        self.rank = []
+        self.count = 0
+        #string holder for displaying score
+        self.outputRank = ""
+        
         #figure->canvas->widget
         self.figure = plt.figure()
         self.canvas = FigureCanvas(self.figure)
         self.canvas.setParent(self.widget)
         
-        
+        #events
         self.pushButton.clicked.connect(self.pushButton_clicked)
         self.pushButton_2.clicked.connect(self.pushButton_clicked)
         self.pushButton_3.clicked.connect(self.results)
+        self.pushButton_4.clicked.connect(self.ranks)
         
     def results(self):
     
         #Loading audio files
+        #Extract MFCC features and use dtw to compare the distance between two MFCCs
         y1, sr1 = librosa.load('output1.wav') 
         y2, sr2 = librosa.load('output2.wav') 
         
         mfcc1 = librosa.feature.mfcc(y1,sr1)   #Computing MFCC values
-        mfcc2 = librosa.feature.mfcc(y2, sr2)
+        mfcc2 = librosa.feature.mfcc(y2,sr2)
             
         dist, cost, path = dtw(mfcc1.T, mfcc2.T)
         
-        val = str(dist)
-        self.textEdit_2.setText("lala" + val)
-       
+        #Set a threshold for our game's ranking system
+        if dist <= 40:
+            self.textEdit_2.setText("You did a great job! ^^")
+        elif dist <= 50:
+            self.textEdit_2.setText("You did good.")
+        elif dist <= 60:
+            self.textEdit_2.setText("You're fine.")
+        else:
+            self.textEdit_2.setText("You are poor at this game... TT")
+            
+        
+        self.rank.append(dist)
+        self.textEdit_3.setText(str(self.rank[self.count]))
+        self.outputRank += "Player " + str(self.count) + " got " + str(self.rank[self.count]) + "\n\n"      
+        self.count = self.count + 1
+        
+        
+            
+    def ranks(self):
+           
+        self.textEdit_3.setText(self.outputRank)
+        
             
     def plot(self):
         ''' plot sound wave '''
-      #  fs, x = wavread('output1.wav')
-      #  self.graphicsView = pg.ViewBox()
-      #  data = pg.PlotDataItem(x)
-      #  self.graphicsView.addItem(data)
-      #  self.graphicsView.show()
     
-        fs, x = wavread('output1.wav')
+#        fs, x = wavread('output1.wav')
+        y1, sr1 = librosa.load('output1.wav') 
+        y2, sr2 = librosa.load('output2.wav') 
         
-        
-        self.figure.set_size_inches(3.5, 1.8)
+        self.figure.set_size_inches(4.5, 2.0)
         #plt.axis('off')
         ax1 = self.figure.add_subplot(2,1,1)
         ax1.axis('off')
         
-        #plt.plot(x)
-        ax1.plot(x)
+        ax1.plot(y1)
         self.canvas.draw()
 
         
     def plotii(self):
         ''' plot sound wave '''
+        #clear the previous canvas that holds the first plot
+        #the reason that I did this is because I couldn't figure out how to use two canvases 
+        #at the same time in one application
+        self.figure.clf()        
         
+        y1, sr1 = librosa.load('output1.wav') 
+        y2, sr2 = librosa.load('output2.wav') 
         
-        fs, x = wavread('output1.wav')
-        
-        fs, y = wavread('output2.wav')
-        
-        self.figure.set_size_inches(3.5, 1.8)
+        self.figure.set_size_inches(4.5, 2.0)
         
             
         ax1 = self.figure.add_subplot(2,1,1)
@@ -91,9 +108,11 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
         ax1.axis('off')
         ax2.axis('off')
         
-        ax1.plot(x)
-        ax2.plot(y)
+        ax1.plot(y1)
+        ax2.plot(y2)
         self.canvas.draw()
+        
+        self.pushButton_2.setChecked(False) 
         
         
     def pushButton_clicked(self):
@@ -101,7 +120,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
         FORMAT = pyaudio.paInt16
         CHANNELS = 2
         RATE = 44100
-        RECORD_SECONDS = 5
+        RECORD_SECONDS = 1
         
         # Set pushButton clickable in Qt designer
         if self.pushButton.isChecked() == True:
@@ -109,7 +128,8 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
             
         if self.pushButton.isChecked() == True and self.pushButton_2.isChecked() == True:
             WAVE_OUTPUT_FILENAME = "output2.wav"
-
+            
+        #Courtesy of https://people.csail.mit.edu/hubert/pyaudio/#examples
         p = pyaudio.PyAudio()
         stream = p.open(format=FORMAT,
                         channels=CHANNELS,
@@ -142,8 +162,9 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
         wf.writeframes(b''.join(frames))
         wf.close()  
         
-        #if self.pushButton.isChecked() == True:
-          #  self.plot()
+        #choose plotting methods when different buttons are pushed
+        if self.pushButton.isChecked() == True:
+            self.plot()
             
         if self.pushButton.isChecked() == True and self.pushButton_2.isChecked() == True:
             self.plotii()
@@ -153,4 +174,3 @@ if __name__ == "__main__":
     win = MainWindow()
     win.show()
     sys.exit(app.exec_())
-
